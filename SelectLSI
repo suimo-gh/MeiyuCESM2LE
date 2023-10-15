@@ -121,7 +121,7 @@ handaxes1 = axes('Position', [0.1 0.2 0.78 0.7]);
 set(gcf,'color','w');
 hold on;
 
-    imread('/Users/chenxiaodan/Documents/colormap/coolwarm.png');  color=squeeze(ans(10,:,:));colorfinal=color(1:50:end,:);colorfinal=cat(1,colorfinal(1:5,:),ones(2,3)*255,colorfinal(7:end,:));colormap(double(colorfinal)/255)   
+    imread('.../coolwarm.png');  color=squeeze(ans(10,:,:));colorfinal=color(1:50:end,:);colorfinal=cat(1,colorfinal(1:5,:),ones(2,3)*255,colorfinal(7:end,:));colormap(double(colorfinal)/255)   
     m_proj('Equidistant Cylindrical','lon',[5 180],'lat',[64.5 88]);% 'miller'
     [LON,LAT]=meshgrid(loncesmsic,latcesmsic);
     m_contourf(LON',LAT',(data)*100,[-40:1:20],'linestyle','none'); hold on; 
