@@ -1,0 +1,320 @@
+%%
+%% Use this file to plot the figures using daily pr data
+%%
+
+%% zonal-mean rainbelt move for WIO-LSI and WIO-noLSI
+clc;clear all;
+file='/.../PRECT_EastAsia_Aug_76_combine_19502014.nc';
+loncesmpr = ncread(file,'lon');  latcesmpr = ncread(file,'lat');
+lonrange = near1(loncesmpr,110):near1(loncesmpr,140); 
+var = 'PRECT'; 
+pr=zeros(53,31*65,80); % July
+for i=1:100,i
+    dir = ['...'];
+    file= [dir,var,'_EastAsia_July_',num2str(i),'_combine_19502014.nc'];
+    temp=ncread(file,var);
+    temp=squeeze(nanmean(temp(lonrange,:,:),1));
+    pr(:,1:size(temp,2),i) = temp;
+end;
+    pr = reshape(pr,[53,31,65,80]).*1000 .*60*60*24;
+    pr7=pr;
+
+pr=zeros(53,30*65,80); % July
+for i=1:100,i
+    dir = ['...'];
+    file= [dir,var,'_EastAsia_June_',num2str(i),'_combine_19502014.nc'];
+    temp=ncread(file,var);
+    temp=squeeze(nanmean(temp(lonrange,:,:),1));
+    pr(:,1:size(temp,2),i) = temp;
+end;
+    pr = reshape(pr,[53,30,65,80]).*1000 .*60*60*24;
+    pr6=pr;
+
+pr = cat(2,pr6,pr7); 
+pr = pr-nanmean(pr,4);
+
+load('.../lowsic.mat');
+load('.../highiosst.mat');
+
+cc=1;clear temp;
+for i=1:65; for j=1:100;
+        temp(:,:,cc) = pr(:,:,i,j);
+        cc=cc+1;
+end;end;total=nanmean(temp,3);
+cc=1;clear temp;
+for i=1:65; for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==0; 
+        temp(:,:,cc) = pr(:,:,i,j);
+        cc=cc+1;end;
+end;end;iow=nanmean(temp,3);
+cc=1;clear temp;
+for i=1:65; for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==1;
+        temp(:,:,cc) = pr(:,:,i,j);
+        cc=cc+1;end;
+end;end;iowarc=nanmean(temp,3);
+
+
+close all;figure(1); 
+set(gcf, 'position', [10 100 350 390]); 
+handaxes1 = axes('Position', [0.2 0.2 0.67 0.60]);
+set(gcf,'color','w');
+hold on;
+
+    imread('/Users/chenxiaodan/Documents/dry.dynamical.core/BlockIdentify/20201216.png');  color=ans(10,:,:);  colorfinal=(squeeze(color));colorfinal=colorfinal(200:200:end,:);colorfinal=cat(1,rgb('dark brown')*255,colorfinal(1:4,:),ones(2,3)*255,colorfinal(5:8,:),rgb('dark green')*255);colormap(double(colorfinal)/255)   
+    data=iowarc-iow; 
+    contourf(1:61,latcesmpr,data,[-1:0.01:1]*10,'linestyle','none');
+    cx=[-0.1 0.1]*27;caxis(cx); 
+    c=colorbar('vertical','position',[0.88 0.2 0.02 0.6]); 
+    c.XTick=[-9:0.9:6]; c. TickLength=0.01; c.FontSize =11;cbarrow;
+    data=iow-total;   
+    [C1,h1]=contour (1:61,latcesmpr,data,[5:1:12],'lineco',rgb('sea green'),'linewi',1.8);clabel(C1,h1,'color',rgb('sea green'),'fontsi',12);
+    
+ax=gca;fontsi=12;
+        ax.YLim=([20 40]);ax.YTick=[15:5:70];
+        ax.XLim=([1,30+31]);ax.XTick=[1:10:31+30];
+        ax.XGrid='off';        ax.YMinorTick='on';  ax.XMinorTick='off';
+        ax.FontSize=fontsi;
+        ax.FontName='Helvetica';
+        set(gca,'tickdir','out');
+        ax.YTickLabel = {'15^oN','20^oN','25^oN','30^oN','35^oN','40^oN','45^oN',}
+        ax.XTickLabel = {'Jun 1','Jun 11','Jun 21','Jul 1','Jul 11','Jul 21','Jul 31'}
+        ax.Box='on';ax.LineWidth=0.8;ax.TickLength=[0.01 0.02]*0.8;
+
+ll=legend ([h1 h2],'WIO-no LSI','WIO-LSI');ll.EdgeColor ='k';ll.Color ='w';ll.FontSize=fontsi;ll.Orientation='vertical';ll.Location='northwest';%%ll.Position=[0.8 0.85 0 0];
+
+
+
+
+
+%% extremes rainy days 
+clc;clear all;
+file='/.../PRECT_EastAsia_Aug_76_combine_19502014.nc';
+loncesmpr = ncread(file,'lon');  latcesmpr = ncread(file,'lat');
+lonrange = near1(loncesmpr,110):near1(loncesmpr,140); latrange = near1(latcesmpr,24):near1(latcesmpr,35);
+[Lonera,Latera] = meshgrid(loncesmpr(lonrange),latcesmpr(latrange));A_era = cdtarea(Latera,Lonera);
+
+var = 'PRECT'; 
+pr=zeros(31*65,1000); % July
+for i=1:1000,i
+    dir = ['/Volumes/CESM2D_Pr/PRECT(no100)/proc/'];
+    file= [dir,var,'_EastAsia_July_',num2str(i),'_combine_19502014.nc'];
+    temp=ncread(file,var);
+    for j=1:size(temp,3); temp1(j)=wmean(temp(lonrange,latrange,j)',A_era,'all','omitnan');end;   
+    pr(1:size(temp1,2),i) = temp1';
+end;
+pr = reshape(pr,[31,65,100]).*1000 .*60*60*24;
+load('.../lowsic.mat');
+load('.../highiosst.mat');
+
+pmme= pr ;flag = 'T';binwi=0.1;
+clear large999; for i=1:100;
+    x = prctile( reshape(pmme(:,:,i),[31*65,1]),99.9);
+    large999(:,:,i)= pmme(:,:,i)>x;
+end;
+clear large99; for i=1:100;
+    x = prctile( reshape(pmme(:,:,i),[31*65,1]),99);
+    large99(:,:,i)= pmme(:,:,i)>x;
+end;
+clear large95; for i=1:100;
+    x = prctile( reshape(pmme(:,:,i),[31*65,1]),95);
+    large95(:,:,i)= pmme(:,:,i)>x;
+end;
+clear large90; for i=1:100;
+    x = prctile( reshape(pmme(:,:,i),[31*65,1]),90);
+    large90(:,:,i)= pmme(:,:,i)>x;
+end;
+clear large75; for i=1:100;
+    x = prctile( reshape(pmme(:,:,i),[31*65,1]),75);
+    large75(:,:,i)= pmme(:,:,i)>x;
+end;
+clear large50; for i=1:100;
+    x = prctile( reshape(pmme(:,:,i),[31*65,1]),50);
+    large50(:,:,i)= pmme(:,:,i)>x;
+end;
+clear large0; for i=1:100;
+    x = prctile( reshape(pmme(:,:,i),[31*65,1]),0);
+    large0(:,:,i)= pmme(:,:,i)>x;
+end;
+
+clear y0; clear y1; clear y2;
+large = large0;  tic=1;
+cc=1;clear pattern;
+for i=1:2014-1950+1;   for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==0;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; 
+y1(tic) = sum(sum(pattern,1),2);
+cc=1;clear pattern;
+for i=1:2014-1950+1;  for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==1;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; 
+y2(tic) = sum(sum(pattern,1),2);
+y0(tic) = sum(sum(sum(large,1),2),3); 
+large = large50;  tic=tic+1;
+cc=1;clear pattern;
+for i=1:2014-1950+1;   for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==0;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; 
+y1(tic) = sum(sum(pattern,1),2);
+cc=1;clear pattern;
+for i=1:2014-1950+1;  for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==1;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; 
+y2(tic) = sum(sum(pattern,1),2);
+y0(tic) = sum(sum(sum(large,1),2),3); 
+large = large75;  tic=tic+1; 
+cc=1;clear pattern;
+for i=1:2014-1950+1;   for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==0;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; 
+y1(tic) = sum(sum(pattern,1),2);
+cc=1;clear pattern;
+for i=1:2014-1950+1;  for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==1;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; 
+y2(tic) = sum(sum(pattern,1),2);
+y0(tic) = sum(sum(sum(large,1),2),3); 
+large = large90;   tic=tic+1;
+cc=1;clear pattern;
+for i=1:2014-1950+1;   for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==0;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; 
+y1(tic) = sum(sum(pattern,1),2);
+cc=1;clear pattern;
+for i=1:2014-1950+1;  for j=1:10;
+        if highsst(j,i)==1 && lowsic(j,i)==1;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; 
+y2(tic) = sum(sum(pattern,1),2);
+y0(tic) = sum(sum(sum(large,1),2),3); 
+large = large95;   tic=tic+1;
+cc=1;clear pattern;
+for i=1:2014-1950+1;   for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==0;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; 
+y1(tic) = sum(sum(pattern,1),2);
+cc=1;clear pattern;
+for i=1:2014-1950+1;  for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==1;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; 
+y2(tic) = sum(sum(pattern,1),2);
+y0(tic) = sum(sum(sum(large,1),2),3); 
+
+large = large99;   tic=tic+1;
+cc=1;clear pattern;
+for i=1:2014-1950+1;   for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==0;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; ccio=cc;
+y1(tic) = sum(sum(pattern,1),2);
+cc=1;clear pattern;
+for i=1:2014-1950+1;  for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==1;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; ccioarc=cc;
+y2(tic) = sum(sum(pattern,1),2);
+y0(tic) = sum(sum(sum(large,1),2),3); 
+large = large999;   tic=tic+1;
+cc=1;clear pattern;
+for i=1:2014-1950+1;   for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==0;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; ccio=cc;
+y1(tic) = sum(sum(pattern,1),2);
+cc=1;clear pattern;
+for i=1:2014-1950+1;  for j=1:100;
+        if highsst(j,i)==1 && lowsic(j,i)==1;
+        pattern(:,cc) = large (:,i,j);cc=cc+1; 
+end;end;end; ccioarc=cc;
+y2(tic) = sum(sum(pattern,1),2);
+y0(tic) = sum(sum(sum(large,1),2),3); 
+
+io=y1./y0; 
+ioarc=y2./y0;   
+y0=31*65*100*(100-[100 50 75 90 95 99 99.9])*0.01;
+
+close all;figure(1); 
+set(gcf, 'position', [100 200 230 280]); 
+handaxes1 = axes('Position', [0.18 0.15 0.78 0.8]);
+hold on;set(gcf,'color','w');
+
+x=1:7; fontzi=12;
+
+h1(1)=bar(x-0.19,io*100,   0.35,'edgecolor','none','facecolor',rgb('sea green'),'linewidth',2);
+h1(2)=bar(x+0.19,ioarc*100,0.35,'edgecolor','none','facecolor',rgb('dark sky blue'),'linewidth',2);alpha 0.55;
+
+ax=gca;fontsi=12;
+        ax.YLim=([0,0.26]*100);ax.YTick=[0:0.05:2]*100;
+        ax.XLim=([4.3 6.7]);ax.XTick=[1:1:7];
+        ax.XGrid='off';        ax.YMinorTick='on';  ax.XMinorTick='off';
+        ax.FontSize=fontsi;
+        ax.FontName='Helvetica';
+        ax.Box='on';ax.LineWidth=0.5;ax.TickLength=[0.01 0.02]*1.2;
+        set(gca,'tickdir','in');
+        yl=ylabel('Percentage'); yl.FontSize=fontsi;
+        ax.XTickLabel = {'','^th','^t^h','^t^h','','','99.9^th'}
+              text(5.85,-1.3,'Total');text(5.85,-2.8,'days'); 
+              text(4.75,-1.3,'Extreme');text(4.7,-2.8,'rainy days'); 
+ll=legend(ax, h1([1:2]),' warm IO without low SIE',' warm IO with low SIE');ll.EdgeColor ='k';ll.Color ='none';ll.FontSize=fontsi-1;ll.Orientation='vertical';ll.Location='northeast';ll.Position=[0.57 0.88 0 0];
+
+
+%%pie chart
+close all;figure(1); 
+set(gcf, 'position', [100 200 380 305]);
+handaxes1 = axes('Position', [0.15 0.55 0.8 0.4]);
+X = [io(6) ioarc(6) 1-io(6)-ioarc(6)];
+explode = [1 1 0];
+p=pie3(X,explode);
+t = p(4);t.FontSize = 11;
+t = p(3);t.FaceColor = rgb('sea green');t.FaceAlpha = 0.55;
+t = p(2);t.FaceColor = rgb('sea green');t.FaceAlpha = 0.55;
+t = p(1);t.FaceColor = rgb('sea green');t.FaceAlpha = 0.55;
+t = p(8);t.FontSize = 11;
+t = p(7);t.FaceColor = rgb('dark sky blue');t.FaceAlpha = 0.55;
+t = p(6);t.FaceColor = rgb('dark sky blue');t.FaceAlpha = 0.55;
+t = p(5);t.FaceColor = rgb('dark sky blue');t.FaceAlpha = 0.55;
+t = p(12);t.Color = 'none';
+t = p(11);t.FaceColor = rgb('light grey');t.FaceAlpha = 0.55;
+t = p(10);t.FaceColor = rgb('light grey');t.FaceAlpha = 0.95;
+t = p(9);t.FaceColor = rgb('light grey');t.FaceAlpha = 0.95;
+
+handaxes1 = axes('Position', [0.15 0.15 0.8 0.4]);
+X = [io(5) ioarc(5) 1-io(5)-ioarc(5)];
+explode = [1 1 0];
+p=pie3(X,explode);
+t = p(4);t.FontSize = 11;
+t = p(3);t.FaceColor = rgb('sea green');t.FaceAlpha = 0.55;
+t = p(2);t.FaceColor = rgb('sea green');t.FaceAlpha = 0.55;
+t = p(1);t.FaceColor = rgb('sea green');t.FaceAlpha = 0.55;
+t = p(8);t.FontSize = 11;
+t = p(7);t.FaceColor = rgb('dark sky blue');t.FaceAlpha = 0.55;
+t = p(6);t.FaceColor = rgb('dark sky blue');t.FaceAlpha = 0.55;
+t = p(5);t.FaceColor = rgb('dark sky blue');t.FaceAlpha = 0.55;
+t = p(12);t.Color = 'none';
+t = p(11);t.FaceColor = rgb('light grey');t.FaceAlpha = 0.55;
+t = p(10);t.FaceColor = rgb('light grey');t.FaceAlpha = 0.95;
+t = p(9);t.FaceColor = rgb('light grey');t.FaceAlpha = 0.95;
+
+ll=legend('WIO-noLSI','WIO-LSI');ll.EdgeColor ='k';ll.Color ='none';ll.FontSize=fontsi-1;ll.Orientation='vertical';ll.Location='northeast';ll.Position=[0.53 0.12 0 0];
+
+
+
+
+
+
+
+
+
+
+
+
+
