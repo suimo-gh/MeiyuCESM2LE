@@ -3,6 +3,81 @@
 %% Use this file to plot the figures to select LSI and HSI cases
 %%
 
+
+%% CESM2 ES SIC timeseries
+clc;clear all;
+period    = [1950:2014];
+periodave = [1981:2010];
+million=10^6; 
+
+dir='...';
+    file=[dir,'ICEFRAC_SubArctic_50N90N_19902100_1.nc']; 
+    latcesmsic=ncread(file,'lat');loncesmsic=ncread(file,'lon');
+    lonrange = near1(loncesmsic,70):near1(loncesmsic,100); latrange = near1(latcesmsic,70):near1(latcesmsic,85);
+    [Lonera,Latera] = meshgrid(loncesmsic(lonrange),latcesmsic(latrange));A_era = cdtarea(Latera,Lonera,'km');
+for num=1:100;
+    file=[dir,'ICEFRAC_SubArctic_50N90N_19902100_',num2str(num),'.nc']; 
+    t = squeeze(ncread(file,'ICEFRAC')); t(t<0.15)=0;
+    t = nansum(nansum(t(lonrange,latrange,:).*A_era',1),2) ;    
+    t = reshape(t,[12,201]);
+    t0(:,:,num)=t;
+end;
+t0 = t0- nanmean(t0(:,periodave-1900+1,:),2); 
+sie0_cesm2= t0(:,period-1900+1,:)./million; 
+
+mon=5; mon
+tmme= squeeze(nanmean(sie0_cesm2(mon,:,:),1));
+tmme = tmme-nanmean(tmme,2); %% reduce EX
+sic = tmme;
+
+years= period;
+close all;figure(1); 
+set(gcf, 'position', [100 200 400 220]);
+handaxes1 = axes('Position', [0.15 0.17 0.7 0.7]);
+hold on;set(gcf,'color','w');
+
+    lowsic = zeros(100,1);highsic = zeros(100,1);
+    for i=1:100;
+        h0=plot(years,sic(:,i),'color',rgb('light grey'),'linewi',0.5);
+        loc=find(sic(:,i) > std(sic(:,i)) * 1 ); % std threshold
+        hred=plot(years(loc),sic(loc,i),'linestyle','none','color',rgb('light red'),'marker','.','markersi',8);
+        highsic(i,loc)=1;
+        loc=find(sic(:,i) < std(sic(:,i)) * -1 ); % std threshold
+        hblue=plot(years(loc),sic(loc,i),'linestyle','none','color',rgb('bright blue'),'marker','.','markersi',8);
+        lowsic(i,loc)=1;
+end;
+        h00=plot(years,mean(sic,2),'--','color',rgb('black'),'linewi',0.8);
+        
+ax=gca;fontsi=10;
+        ax.YLim=([-0.1,0.06]);ax.YTick=[-0.4:0.04:0.1];
+        ax.XLim=([period(1)-1 period(end)+1]);ax.XTick=[1900:10:2030];
+        ax.XGrid='off';        ax.YMinorTick='off';  ax.XMinorTick='off';
+        ax.FontSize=fontsi;
+        ax.FontName='Helvetica';
+        ax.Box='on';ax.LineWidth=0.5;ax.TickLength=[0.01 0.02];
+        set(gca,'tickdir','in');
+        yl=ylabel('SIE (million km^2)'); yl.FontSize=fontsi;
+l=legend([hred hblue],'HSI','LSI');l.Color='none';l.FontSize=10;l.Position=[0.25 0.2 0.1 0.1];l.Orientation='Horizontal';
+
+% hadisst
+mon=5; mon
+    file='/.../HadISST_ice.nc';%since 1870
+    sic=ncread(file,'sic');sic=cat(1,sic(181:end,:,:),sic(1:180,:,:));
+    sic=reshape(sic,[360,180,12,152]); sic(sic<0.15)=NaN;
+    sic=sic-nanmean(sic(:,:,:,periodave-1870+1),4);
+    sic=sic(:,:,:,period-1870+1);
+    lon=ncread(file,'longitude');lon=cat(1,lon(181:end,:),lon(1:180,:)+360);lat=ncread(file,'latitude');
+    lonrange = near1(lon,70):near1(lon,100); latrange = near1(lat,90):near1(lat,60);
+    [Lonera,Latera] = meshgrid(lon(lonrange),lat(latrange));A_era = cdtarea(Latera,Lonera,'km');
+    clear s0_e;for m=1:12,for i=1:size(sic,4);
+        s0_e(m,i)= nansum(nansum(sic(lonrange,latrange ,m,i).* A_era' ,1),2);
+    end;end; s0_e=nanmean(s0_e(mon,:),1)./million;
+    hobs=plot(years,s0_e,'-','color',rgb('bright pink'),'linewi',0.8);
+    l=legend([hobs h0 h00 ],'HadISST','Individual runs','Ensemble mean');l.Color='none';l.FontSize=10;l.Position=[0.25 0.2 0.2 0.2];
+    
+
+
+
 %% plot obs sea-ice edge
 clc;clear all;
 periodave = [1981:2010]; 
