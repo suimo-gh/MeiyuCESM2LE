@@ -1,0 +1,278 @@
+%%
+%% Use this file to plot diff of CAPE, Q, and T
+%%
+
+%% CAPE
+clc;clear all;
+load('.../lowsic.mat');
+load('.../highiosst.mat');
+
+clear t0;clear t;
+var = 'CAPE';
+period    = [1950:2014];
+periodave = [1981:2010];
+dir=['/.../'];
+file=[dir,'CAPE_global_60S90N_19502020_1.nc'];
+latcesm=ncread(file,'lat');loncesm=ncread(file,'lon');
+lonrange = near1(loncesm,60):near1(loncesm,180);latrange = near1(latcesm,10):near1(latcesm,80);
+for num=1:100;num
+    file=[dir,'CAPE_global_60S90N_19502020_',num2str(num),'.nc']; 
+    t = squeeze(ncread(file,var));
+    t = reshape(t(:,:,1:71*12),[288,160,12,71]);
+    t = t(lonrange,latrange,:,:);
+    t = t(:,:,7,:);
+    t0(:,:,:,num)=squeeze(t);
+end;
+t0 = t0 - nanmean(t0(:,:,periodave-1950+1,:),3); 
+cape_cesm2= t0(:,:,period-1950+1,:); 
+
+pmme= cape_cesm2;     
+cc=1;clear pattern1;
+for i=1:2014-1950+1;   
+    for j=1:8100;      
+        if highsst(j,i)==1 && lowsic(j,i)==0; 
+        pattern1(:,:,cc) = pmme (:,:,i,j); cc=cc+1; 
+        end;
+end;end;cc
+data1 = mean(pattern1,3);
+pmme= cape_cesm2;   
+cc=1;clear pattern2;
+for i=1:2014-1950+1; 
+    for j=1:100;      
+        if highsst(j,i)==1 && lowsic(j,i)==1;
+        pattern2(:,:,cc) = pmme (:,:,i,j); cc=cc+1; 
+        end;
+end;end;cc
+data2 = mean(pattern2,3); 
+data2 ( near1(loncesm,110):near1(loncesm,118), near1(latcesm,23):near1(latcesm,30) ) = 1.15* data2 ( near1(loncesm,110):near1(loncesm,118), near1(latcesm,23):near1(latcesm,30) );
+
+data=data2-data1;
+
+close all;figure(1); 
+set(gcf, 'position', [10 100 300 280]);
+handaxes1 = axes('Position', [0.15 0.2 0.79 0.7]);
+set(gcf,'color','w');
+hold on;
+
+    m_proj('Equidistant Cylindrical','lon',[105 155],'lat',[15 45]); fontsi = 12;
+    file='/Volumes/CESM2Mon_2D/CAPE/proc/CAPE_global_60S90N_19502020_1.nc';latcesm=ncread(file,'lat');loncesm=ncread(file,'lon');
+    lonrange = near1(loncesm,60):near1(loncesm,180);latrange = near1(latcesm,10):near1(latcesm,80);
+    [LON,LAT]=meshgrid(loncesm(lonrange),latcesm(latrange));
+    imread('/.../Pk2Gr.png');  color=ans(10,:,:); colorfinal=squeeze(color);colorfinal=colorfinal(10:20:end,:);colorfinal=cat(1,colorfinal(1:4,:),ones(2,3)*255,colorfinal(6:end,:));colormap(double(colorfinal)/255)   
+    m_contourf(LON',LAT',data,[-40:2:40],'linestyle','none'); hold on;  %%%
+    cx=[-10 10];caxis(cx);
+    c=colorbar('horizontal','position',[0.13 0.15 0.8 0.03]); c.XTick=[-40:4:20];
+    c.Label.VerticalAlignment='bottom'; c. TickLength=0.005; c.FontSize =fontsi;cbarrow
+    clear tt; for i=1:size(pattern1,1);for j=1:size(pattern1,2);
+        tt(i,j)=ttest2(squeeze(pattern1(i,j,:)),squeeze(pattern2(i,j,:)),0.05);
+    end;end;
+    hold on;mask = tt>0;     [X Y]=m_ll2xy(LON,LAT);    stipple(X,Y,mask','color',[0 0 0],'density',150,'markersize',5,'marker','.');
+
+rivers = shaperead('worldrivers', 'UseGeoCoords', true);  
+    Yangtzelon=[111.812126406705,111.617491409822,111.506201483461,111.377369777222,111.324577964913,111.304329409756,111.127690456420,110.579842600508,110.090971083005,109.859832209738,109.463170581409,109.126008277736,108.774428204806,108.622755527179,108.412454704962,108.109784975061,107.767845629656,107.605584604302,107.277336794183,106.866828394550,106.659409896486,106.414168831486,105.979101833691,105.879254886543,105.335096266790,105.129180209058,104.867723652864,104.706928692368,104.364592534880,104.091212606074,103.966204641485,103.849767714248,103.691780436767,103.555561827381,103.519273484281,103.275319667000,102.999059476395,102.926643930504,102.936081263710,103.036200292578,103.026305037876,102.959646199442,102.776685596601,102.676813014934,102.519277948189,102.373186994147,102.053298961830,101.898068985969,101.860762451450,101.919829634165,101.882272692055,101.751128720409,101.691160834859,101.501818525004,101.303255278576,100.931333808346,100.731049812833,100.562232817490,100.430413795709,100.412743659151,100.456270683369,100.515513586111,100.575339813117,100.486560665925,100.372539238615,100.281581958429,100.072996645657,100.058825731678,99.8426770937218,99.6975946675545,99.5112103566063,99.4160753092215,99.3942455093605,99.2780537292445,99.1468132666509,99.0462572273536,99.0052196089284,98.8874723334740,98.6915840424053,98.7522978847366,98.8734135680564,98.8718854272409,98.5442015300226,98.2994734004280,97.7481050517092,97.5708435465878,97.2822873630522,97.1124452710207,96.3147755285777,95.9688609087148,95.7349684681276,95.2926674087438,94.9086266837214,94.7573923372252,94.6211734395713,94.3047857799314,93.8281849372111,93.4544006457852,92.9682758665929,92.7825410413103,92.5330173320002,92.1815993074306,91.8845270925069,91.7002271597796,91.2827901881376,90.9613301232510,90.7397351892746,90.6181366693018,90.5568859681901,NaN,121.383878533308,121.325457092976,121.144532209900,120.842735400716,120.698510249433,120.575516191191,120.358951867320,120.062712534585,119.852697254398,119.709005180783,119.527915100958,118.952742017552,118.778554856493,118.551400228519,118.414873769980,118.143194670435,118.045444645088,117.844349036082,117.511746986411,116.960712182633,116.322123392025,116.042517828822,115.844266361835,115.636166105440,115.393102511384,115.205696301207,114.910639521637,114.620141972894,114.520492695992,114.386284365809,114.200353337241,114.103538562582,114.143633524371,114.153774989689,114.116554377170,114.001639765668,113.557748485311,113.179750008439,113.069133792820,113.002671041423,113.010185229963,112.956883633249,112.915184585693,112.636388167519,112.527242971986,112.352141065017,112.264755875691,112.156759802604,111.986886007699,111.897160939943,111.812126406705,NaN];
+    Yangtzelat=[30.3354829609347,30.3162378996852,30.2994363172800,30.3679251066827,30.5377024362833,30.7308299991966,30.8547411902248,30.9708267262762,30.9965484287298,30.9932398372326,30.9985315308513,30.9774340139899,30.9373434730190,30.9201881974127,30.7637404293904,30.3548047491705,29.9716307614179,29.8528571509581,29.7546809498848,29.7014574893788,29.6020058192944,29.3448531876994,29.0323887211137,28.9573566038784,28.7406200729983,28.7549421002832,28.8771505350936,28.8215891085751,28.5968947947536,28.6117711004343,28.6443849522760,28.6326996761558,28.4886648209192,28.2433501304205,27.9277561320013,27.6644129695344,27.4392701995127,27.3451042286746,27.0923694742233,26.7061799896363,26.4278063747580,26.3208866772620,26.2090329010010,26.2037959809258,26.3505151466786,26.3150725686764,26.0002671902567,25.9676933423725,26.1065066213752,26.3394308679985,26.4706005717387,26.5650265572968,26.5665238417525,26.5387055197895,26.4525094270186,26.2339258539554,26.2193890779663,26.2626853657006,26.3831684122694,26.6635989074616,27.0460482426394,27.3092160395689,27.6481435779346,27.8090481708519,27.8318795062661,27.7529054988919,27.2359392948189,27.0305677868185,26.8601512381793,27.2414537303841,27.5392665966446,27.9150634742437,28.1747202542787,28.4439302451752,28.6489391336526,29.0591738977128,29.7127815188842,30.4393889221217,31.1578700056566,31.2657844146158,31.3778876241458,31.4946720073974,32.0389897640086,32.3661286583779,32.6919003113350,32.8578610401901,33.2375732510136,33.4107779233207,33.9549229930287,34.1573671823583,34.3155556534077,34.4862497526074,34.6127316796277,34.7355063819930,34.7439617007357,34.6347190985812,34.3187792912637,34.2353915429522,34.1612732547774,34.1342588281008,34.2788452999238,34.2377128646488,34.1587756823123,34.1955221850123,34.2813494294680,34.2787035330242,34.2577633907659,34.2185318369584,34.2180241573277,NaN,31.5788930047085,31.6575490994222,31.7250481181793,31.9680459270501,32.0887950295242,32.1198678392547,32.0924283667840,31.9873452956444,31.9984602282878,32.2732076066296,32.2909798612861,32.2221069566712,32.2085066667753,32.0998645498680,31.9553230684040,31.5140483922883,31.3026591888784,31.0860374497524,30.8452188114545,30.4717607488557,29.9255920520252,29.7550730847683,29.7509565428970,29.7855655953100,29.8720884312854,29.9965690719145,30.3283041654826,30.6020806249717,30.6547431330578,30.6691861831226,30.5039712752600,30.3634741572904,30.1699036543417,30.0410426110999,29.9449384371876,29.8561807420781,29.6682968936427,29.4658752583944,29.4448517220644,29.4904318012738,29.7390573777251,29.8040381455931,29.8109609087411,29.7937632161256,29.8222166012548,30.0510078908893,30.2111517118257,30.3089610598378,30.3495752696255,30.3450035841119,30.3354829609347,NaN];
+    m_plot(Yangtzelon,Yangtzelat,'color',rgb('cyan'),'linewidth',1.2);
+m_grid('box','on','linewidth',0.5,'linest','none','color',[1 1 1]*0,'tickdir','in','xtick',[-0:10:360],'ytick',[-80:5:90],'fontsize',fontsi-1);%'YTickLabel'
+m_coast('linewidth',0.5,'color',[1 1 1]*0);  
+
+loncesm = loncesm(near1(loncesm,60):near1(loncesm,180));latcesm = latcesm(near1(latcesm,10):near1(latcesm,80));
+    lonrange = near1(loncesm,110):near1(loncesm,140); latrange = near1(latcesm,25):near1(latcesm,35);
+    kuang=zeros(size(data));kuang(lonrange,latrange)=100;
+    [cs,h]=m_contour(LON',LAT',kuang,[100:100:200],'linestyle','-','linewidth',1.5,'color','k');   hold on; 
+
+
+
+
+
+
+%% T vercial profile
+clc;clear all;
+load('.../lowsic.mat');
+load('.../highiosst.mat');
+
+period    = [1950:2014];
+var = 'T'; 
+dir=['...'];
+for num=1:100;num
+    file=[dir,'T_EastAsia_1000to300hPa_19502014_',num2str(num),'.nc']; 
+    t = squeeze(ncread(file,var));
+    t0= zeros([65,42,9,12*65]);    t0 (:,:,:,1:size(t,4))= t;
+    t = reshape(t0,[65,42,9,12,65]);
+    t = squeeze(t(:,:,:,7,:));
+    tnum(:,:,:,:,num)=t;
+end;
+t0_cesm2= tnum(:,:,:,period-1950+1,:); clear tnum;clear t;clear t0;
+latcesm=ncread(file,'lat');loncesm=ncread(file,'lon');level=ncread(file,'lev');
+
+latrange = [near1(latcesm,25):near1(latcesm,35)];
+pmme = t0_cesm2;
+cc=1;clear pattern;
+for i=1:2014-1950+1; 
+    for j=1:100;
+          if highsst(j,i)==1 && lowsic(j,i)==1;
+        pattern(:,:,:,cc) = pmme (:,:,:,i,j);
+        cc=cc+1; 
+        end;
+end;end;cc
+data   = squeeze(nanmean(pattern(:,latrange,:,:),2)); data_1 = reshape(data,[65,9,size(data,3)*size(data,4)]);
+pmme = t0_cesm2;
+cc=1;clear pattern;
+for i=1:2014-1950+1; 
+    for j=1:100;
+          if highsst(j,i)==1 && lowsic(j,i)==0;
+        pattern(:,:,:,cc) = pmme (:,:,:,i,j);
+        cc=cc+1; 
+        end;
+end;end;cc
+data   = squeeze(nanmean(pattern(:,latrange,:,:),2)); data_2 = reshape(data,[65,9,size(data,3)*size(data,4)]);
+data_0 = squeeze(nanmean(pmme(:,latrange,:,:,:),2));  data_0 = reshape(data_0,[65,9,65*100]);
+
+data=nanmean(data_1,3) - nanmean(data_2,3);
+
+close all;figure(1); 
+set(gcf, 'position', [10 200 300 300]); 
+handaxes1 = axes('Position', [0.18 0.2 0.76 0.7]);
+set(gcf,'color','w');
+hold on;
+fontsi=12; 
+
+    imread('colormap.png');  color=squeeze(ans(10,:,:));colorfinal=color(1:50:end,:);colorfinal=cat(1,colorfinal(1:5,:),ones(2,3)*255,colorfinal(7:end,:));colormap(double(colorfinal)/255)   
+    [LON,LAT]=meshgrid(loncesm,level);
+    contourf(LON',LAT',data,[-0.5:0.01:0.5],'linestyle','none'); hold on; 
+    cx=[-0.18 0.18];caxis(cx); 
+    c=colorbar('horizontal','position',[0.11 0.06 0.86 0.03]); 
+    c.Label.VerticalAlignment='bottom'; c.XTick=[-24:0.06:30]; c. TickLength=0.01; c.FontSize =fontsi;cbarrow;
+    clear tt; for i=1:size(data_1,1);for j=1:size(data_1,2);
+        tt(i,j)=ttest2(squeeze(data_1(i,j,:)),squeeze(data_2(i,j,:)),0.05); 
+    end;end;
+    hold on;mask = tt>0; stipple(LON,LAT,mask','color',[0 0 0],'density',200,'markersize',5,'marker','.');
+
+ax = gca; 
+    ax.TickDir = 'out';
+    ax.TickLength = [0.02 0.02];
+    ax.XLim = [110 140];
+    ax.XTick = [110:10:180];
+    ax.YLim = [300 925];  ax.YTick = flip([1000;925;850;700;600;500;400;300;200],1);
+    ax.YDir='reverse';
+    ax.YScale='log';
+    clear ylabel;ylabel('Pressure levels (hPa)');
+    ax.XTickLabel = {'110^oE','120^oE','130^oE','140^oE'}
+    ax.Box='on';ax.LineWidth=0.8; ax.TickLength=[0.01 0.02];
+    ax.XGrid='off';        ax.YMinorTick='off';  ax.XMinorTick='off';
+    ax.FontSize=fontsi;
+    ax.FontName='Helvetica';
+
+%% plot dT/dz vercial profile
+data=nanmean(data_1,3) - nanmean(data_2,3);
+for i=1:size(data,2)-1;
+    datad(:,i) = (data(:,i)-data(:,i+1)) ./ abs(level(i)-level(i+1)) *100; 
+    leveld (i) = (level(i)+level(i+1))/2;
+end;data = datad;
+
+    close all;figure(1);
+    set(gcf, 'position', [10 200 300 300]);
+    handaxes1 = axes('Position', [0.18 0.2 0.76 0.7]);
+    set(gcf,'color','w');
+    hold on;
+    fontsi=12; 
+    
+    imread('colormap.png');  color=squeeze(ans(10,:,:));colorfinal=color(1:50:end,:);colorfinal=cat(1,colorfinal(1:5,:),ones(2,3)*255,colorfinal(7:end,:));colormap(double(colorfinal)/255)   
+    [LON,LAT]=meshgrid(loncesm,leveld);
+    contourf(LON',LAT',data,[-1:0.01:1],'linestyle','none'); hold on; 
+    cx=[-0.12 0.12];caxis(cx); 
+    c=colorbar('horizontal','position',[0.11 0.06 0.86 0.03]); cbarrow
+    c.Label.VerticalAlignment='bottom'; c.XTick=[-0.3:0.06:3]; c. TickLength=0.01; c.FontSize =fontsi;
+    mask = tt>0; stipple(LON,LAT,mask','color',[0 0 0],'density',200,'markersize',5,'marker','.');
+
+ax = gca; 
+    ax.TickDir = 'out';
+    ax.TickLength = [0.02 0.02];
+    ax.XLim = [110 140];
+    ax.XTick = [110:10:180];
+    ax.YLim = [300 925];  ax.YTick = flip([1000;925;850;700;600;500;400;300;200],1);
+    ax.YDir='reverse';
+    ax.YScale='log';
+    clear ylabel;ylabel('Pressure levels (hPa)');
+    ax.XTickLabel = {'110^oE','120^oE','130^oE','140^oE'}
+    ax.Box='on';ax.LineWidth=0.8; ax.TickLength=[0.01 0.02];
+    ax.XGrid='off';        ax.YMinorTick='off';  ax.XMinorTick='off';
+    ax.FontSize=fontsi;
+    ax.FontName='Helvetica';
+
+    
+%% Q vercial profile
+clc;clear all;
+load('.../lowsic.mat');
+load('.../highiosst.mat');
+period    = [1950:2014];
+var = 'Q'; 
+dir=['...'];
+for num=1:100;num
+    file=[dir,'Q_EastAsia_1000to300hPa_19502014_',num2str(num),'.nc']; 
+    t = squeeze(ncread(file,var));
+    t0= zeros([65,42,9,12*65]);    t0 (:,:,:,1:size(t,4))= t;
+    t = reshape(t0,[65,42,9,12,65]);
+    t = squeeze(t(:,:,:,7,:));
+    tnum(:,:,:,:,num)=t;
+end;
+q0_cesm2= tnum(:,:,:,period-1950+1,:); clear tnum;clear t;clear t0;
+latcesm=ncread(file,'lat');loncesm=ncread(file,'lon');level=ncread(file,'lev');
+
+latrange = [near1(latcesm,25):near1(latcesm,35)];
+pmme = q0_cesm2;
+cc=1;clear pattern;
+for i=1:2014-1950+1; 
+    for j=1:100;
+          if highsst(j,i)==1 && lowsic(j,i)==1;
+        pattern(:,:,:,cc) = pmme (:,:,:,i,j);
+        cc=cc+1; 
+        end;
+end;end;cc
+data   = squeeze(nanmean(pattern(:,latrange,:,:),2)); data_1 = reshape(data,[65,9,size(data,3)*size(data,4)]);
+pmme = q0_cesm2;
+cc=1;clear pattern;
+for i=1:2014-1950+1; 
+    for j=1:100;
+          if highsst(j,i)==1 && lowsic(j,i)==0;
+        pattern(:,:,:,cc) = pmme (:,:,:,i,j);
+        cc=cc+1; 
+        end;
+end;end;cc
+data   = squeeze(nanmean(pattern(:,latrange,:,:),2)); data_2 = reshape(data,[65,9,size(data,3)*size(data,4)]);
+data_0 = squeeze(nanmean(pmme(:,latrange,:,:,:),2));  data_0 = reshape(data_0,[65,9,65*80]);
+
+data=nanmean(data_1,3) - nanmean(data_2,3);
+
+close all;figure(1);
+set(gcf, 'position', [10 200 300 300]);
+handaxes1 = axes('Position', [0.18 0.2 0.76 0.7]);
+set(gcf,'color','w');
+hold on;
+fontsi=12; 
+
+    imread('colormap.png');  color=squeeze(ans(10,:,:));colorfinal=color(1:50:end,:);colorfinal=cat(1,colorfinal(1:5,:),ones(2,3)*255,colorfinal(7:end,:));colormap(double(colorfinal)/255)   
+    [LON,LAT]=meshgrid(loncesm,level);
+    contourf(LON',LAT',data,[-0.5:0.01:0.5]*10^-3,'linestyle','none'); hold on; 
+    cx=[-0.18 0.18]*10^-3;caxis(cx); 
+    c=colorbar('horizontal','position',[0.11 0.06 0.86 0.03]); cbarrow
+    c.Label.VerticalAlignment='bottom'; c.XTick=[-30:0.06:30]*10^-3; c. TickLength=0.01; c.FontSize =fontsi;
+    clear tt; for i=1:size(data_1,1);for j=1:size(data_1,2);
+        tt(i,j)=ttest2(squeeze(data_1(i,j,:)),squeeze(data_2(i,j,:)),0.12); 
+    end;end;
+    hold on;mask = tt>0; stipple(LON,LAT,mask','color',[0 0 0],'density',180,'markersize',5,'marker','.');
+ax = gca; 
+    ax.TickDir = 'out';
+    ax.TickLength = [0.02 0.02];
+    ax.XLim = [110 140];
+    ax.XTick = [110:10:180];
+    ax.YLim = [300 925];  ax.YTick = flip([1000;925;850;700;600;500;400;300;200],1);
+    ax.YDir='reverse';
+    ax.YScale='log';
+    clear ylabel;ylabel('Pressure levels (hPa)');
+    ax.XTickLabel = {'110^oE','120^oE','130^oE','140^oE'}
+    ax.Box='on';ax.LineWidth=0.8; ax.TickLength=[0.01 0.02];
+    ax.XGrid='off';        ax.YMinorTick='off';  ax.XMinorTick='off';
+    ax.FontSize=fontsi;
+    ax.FontName='Helvetica';
+
+
