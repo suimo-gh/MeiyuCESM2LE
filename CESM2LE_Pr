@@ -1,0 +1,353 @@
+
+%%
+%% Use this file to plot the figures using monthly Pr
+%%
+
+
+%% load pr data
+clc;clear all;
+period = [1950:2014];
+periodave = [1981:2010];
+
+clear t0;clear t;
+var = 'PRECT';
+dir=['/Volumes/CESM2M_PrTQ/precipitation/',var,'/proc/'];
+for num=1:100;
+    file=[dir,var,'_EastAsia_90E180E_0N60N_19002100_',num2str(num),'.nc']; 
+    t = squeeze(ncread(file,var));
+    t = reshape(t(:,:,1:130*12),[73,64,12,130]);
+    t0(:,:,:,:,num)=t(:,:,6:7,:);
+end;'pr'
+t0 = t0- nanmean(t0(:,:,:,periodave-1900+1,:),4); 
+pr0_cesm2= t0(:,:,:,period-1900+1,:); 
+latcesmpr=ncread(file,'lat');loncesmpr=ncread(file,'lon'); 
+
+clear t0;clear t;
+var = 'PRECL';
+dir=['/Volumes/CESM2M_PrTQ/precipitation/',var,'/proc/'];
+for num=1:100;
+    file=[dir,var,'_EastAsia_90E180E_0N60N_19002100_',num2str(num),'.nc']; 
+    t = squeeze(ncread(file,var));
+    t = reshape(t(:,:,1:130*12),[73,64,12,130]);
+    t0(:,:,:,:,num)=t(:,:,6:7,:);
+end;'pr'
+t0 = t0- nanmean(t0(:,:,:,periodave-1900+1,:),4); 
+prl0_cesm2= t0(:,:,:,period-1900+1,:); 
+
+clear t0;clear t;
+var = 'PRECC';
+dir=['/Volumes/CESM2M_PrTQ/precipitation/',var,'/proc/'];
+for num=1:100;
+    file=[dir,var,'_EastAsia_90E180E_0N60N_19002100_',num2str(num),'.nc']; 
+    t = squeeze(ncread(file,var));
+    t = reshape(t(:,:,1:130*12),[73,64,12,130]);
+    t0(:,:,:,:,num)=t(:,:,6:7,:);
+end;'pr'
+t0 = t0- nanmean(t0(:,:,:,periodave-1900+1,:),4); 
+prc0_cesm2= t0(:,:,:,period-1900+1,:); 
+latcesmpr=ncread(file,'lat');loncesmpr=ncread(file,'lon'); 
+
+%% plot Pr composite maps
+load('/.../lowsic_MJ.mat','lowsic');   
+load('/.../highsstio_MJ.mat','highsstio');   
+
+mon=6:7; %%% 6:7/6/7
+pmme= squeeze(nanmean(pr0_cesm2(:,:,mon-5,:,:),3)); mm=20;flag = 'T';  % JJ
+% pmme= squeeze(nanmean(pr0_cesm2(:,:,mon-5,:,:),3)); mm=24;flag = 'T';% J
+% % % pmme= squeeze(nanmean(prl0_cesm2(:,:,mon-5,:,:),3)); mm=24; flag = 'L';% J
+% % % pmme= squeeze(nanmean(prc0_cesm2(:,:,mon-5,:,:),3)); mm=24;flag = 'C';% J
+
+pmme = pmme-nanmean(pmme,4); %% reduce EX
+cc=1;clear pattern;
+for i=1:size(lowsic,2); 
+    for j=1:size(lowsic,1);     
+        if highsstio(j,i)==1; flag = 'N'; % WIO
+%         if lowsic(j,i)==1; flag = 'N'; % LSI
+%         if highsstio(j,i)==1 && lowsic(j,i)==1; flag = 'Y';% WIO-LSI
+%         if highsstio(j,i)==1 && lowsic(j,i)==0;flag = 'N'; % WIO-noLSI
+%         if highsstio(j,i)==0 && lowsic(j,i)==1;flag = 'N'; % LSI-noWIO
+        pattern(:,:,cc) = pmme (:,:,i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+    data = nanmean(pattern,3);data=data .*1000 .*60*60*24; % m/s convert to mm/day
+
+close all;figure(1);
+set(gcf, 'position', [10 100 300 280]);
+handaxes1 = axes('Position', [0.15 0.2 0.79 0.7]);
+set(gcf,'color','w');
+hold on;
+fontsi=12;
+
+    m_proj('Equidistant Cylindrical','lon',[105 155],'lat',[15 45]); fontsi = 12;
+    imread('/.../colormap.png');  color=ans(10,:,:);  colorfinal=(squeeze(color));colorfinal=colorfinal(200:200:end,:);colorfinal=cat(1,rgb('dark brown')*255,colorfinal(1:4,:),ones(2,3)*255,colorfinal(5:end,:),rgb('dark green')*255);colormap(double(colorfinal)/255)   
+    [LON,LAT]=meshgrid(loncesmpr,latcesmpr);
+    m_contourf(LON',LAT',data,[-0.4:0.01:0.4]*10,'linestyle','none'); hold on; 
+    cx=[-0.1 0.1]*mm;caxis(cx); 
+    c=colorbar('horizontal','position',[0.13 0.15 0.8 0.03]); 
+    c.Label.VerticalAlignment='bottom'; c.XTick=[-20:0.05*mm:2.4]; c. TickLength=0.01; c.FontSize =13;cbarrow; 
+    clear tt; for i=1:size(data,1);for j=1:size(data,2);
+        tt(i,j)=ttest2(squeeze(pattern(i,j,:)),zeros(size(pattern,3),1),0.05);
+    end;end; 
+    mask = tt>0; [X Y]=m_ll2xy(LON,LAT);    stipple(X,Y,mask','color',[0 0 0]+0.3,'density',150,'markersize',5,'marker','.');
+
+rivers = shaperead('worldrivers', 'UseGeoCoords', true);  
+    Yangtzelon=[111.812126406705,111.617491409822,111.506201483461,111.377369777222,111.324577964913,111.304329409756,111.127690456420,110.579842600508,110.090971083005,109.859832209738,109.463170581409,109.126008277736,108.774428204806,108.622755527179,108.412454704962,108.109784975061,107.767845629656,107.605584604302,107.277336794183,106.866828394550,106.659409896486,106.414168831486,105.979101833691,105.879254886543,105.335096266790,105.129180209058,104.867723652864,104.706928692368,104.364592534880,104.091212606074,103.966204641485,103.849767714248,103.691780436767,103.555561827381,103.519273484281,103.275319667000,102.999059476395,102.926643930504,102.936081263710,103.036200292578,103.026305037876,102.959646199442,102.776685596601,102.676813014934,102.519277948189,102.373186994147,102.053298961830,101.898068985969,101.860762451450,101.919829634165,101.882272692055,101.751128720409,101.691160834859,101.501818525004,101.303255278576,100.931333808346,100.731049812833,100.562232817490,100.430413795709,100.412743659151,100.456270683369,100.515513586111,100.575339813117,100.486560665925,100.372539238615,100.281581958429,100.072996645657,100.058825731678,99.8426770937218,99.6975946675545,99.5112103566063,99.4160753092215,99.3942455093605,99.2780537292445,99.1468132666509,99.0462572273536,99.0052196089284,98.8874723334740,98.6915840424053,98.7522978847366,98.8734135680564,98.8718854272409,98.5442015300226,98.2994734004280,97.7481050517092,97.5708435465878,97.2822873630522,97.1124452710207,96.3147755285777,95.9688609087148,95.7349684681276,95.2926674087438,94.9086266837214,94.7573923372252,94.6211734395713,94.3047857799314,93.8281849372111,93.4544006457852,92.9682758665929,92.7825410413103,92.5330173320002,92.1815993074306,91.8845270925069,91.7002271597796,91.2827901881376,90.9613301232510,90.7397351892746,90.6181366693018,90.5568859681901,NaN,121.383878533308,121.325457092976,121.144532209900,120.842735400716,120.698510249433,120.575516191191,120.358951867320,120.062712534585,119.852697254398,119.709005180783,119.527915100958,118.952742017552,118.778554856493,118.551400228519,118.414873769980,118.143194670435,118.045444645088,117.844349036082,117.511746986411,116.960712182633,116.322123392025,116.042517828822,115.844266361835,115.636166105440,115.393102511384,115.205696301207,114.910639521637,114.620141972894,114.520492695992,114.386284365809,114.200353337241,114.103538562582,114.143633524371,114.153774989689,114.116554377170,114.001639765668,113.557748485311,113.179750008439,113.069133792820,113.002671041423,113.010185229963,112.956883633249,112.915184585693,112.636388167519,112.527242971986,112.352141065017,112.264755875691,112.156759802604,111.986886007699,111.897160939943,111.812126406705,NaN];
+    Yangtzelat=[30.3354829609347,30.3162378996852,30.2994363172800,30.3679251066827,30.5377024362833,30.7308299991966,30.8547411902248,30.9708267262762,30.9965484287298,30.9932398372326,30.9985315308513,30.9774340139899,30.9373434730190,30.9201881974127,30.7637404293904,30.3548047491705,29.9716307614179,29.8528571509581,29.7546809498848,29.7014574893788,29.6020058192944,29.3448531876994,29.0323887211137,28.9573566038784,28.7406200729983,28.7549421002832,28.8771505350936,28.8215891085751,28.5968947947536,28.6117711004343,28.6443849522760,28.6326996761558,28.4886648209192,28.2433501304205,27.9277561320013,27.6644129695344,27.4392701995127,27.3451042286746,27.0923694742233,26.7061799896363,26.4278063747580,26.3208866772620,26.2090329010010,26.2037959809258,26.3505151466786,26.3150725686764,26.0002671902567,25.9676933423725,26.1065066213752,26.3394308679985,26.4706005717387,26.5650265572968,26.5665238417525,26.5387055197895,26.4525094270186,26.2339258539554,26.2193890779663,26.2626853657006,26.3831684122694,26.6635989074616,27.0460482426394,27.3092160395689,27.6481435779346,27.8090481708519,27.8318795062661,27.7529054988919,27.2359392948189,27.0305677868185,26.8601512381793,27.2414537303841,27.5392665966446,27.9150634742437,28.1747202542787,28.4439302451752,28.6489391336526,29.0591738977128,29.7127815188842,30.4393889221217,31.1578700056566,31.2657844146158,31.3778876241458,31.4946720073974,32.0389897640086,32.3661286583779,32.6919003113350,32.8578610401901,33.2375732510136,33.4107779233207,33.9549229930287,34.1573671823583,34.3155556534077,34.4862497526074,34.6127316796277,34.7355063819930,34.7439617007357,34.6347190985812,34.3187792912637,34.2353915429522,34.1612732547774,34.1342588281008,34.2788452999238,34.2377128646488,34.1587756823123,34.1955221850123,34.2813494294680,34.2787035330242,34.2577633907659,34.2185318369584,34.2180241573277,NaN,31.5788930047085,31.6575490994222,31.7250481181793,31.9680459270501,32.0887950295242,32.1198678392547,32.0924283667840,31.9873452956444,31.9984602282878,32.2732076066296,32.2909798612861,32.2221069566712,32.2085066667753,32.0998645498680,31.9553230684040,31.5140483922883,31.3026591888784,31.0860374497524,30.8452188114545,30.4717607488557,29.9255920520252,29.7550730847683,29.7509565428970,29.7855655953100,29.8720884312854,29.9965690719145,30.3283041654826,30.6020806249717,30.6547431330578,30.6691861831226,30.5039712752600,30.3634741572904,30.1699036543417,30.0410426110999,29.9449384371876,29.8561807420781,29.6682968936427,29.4658752583944,29.4448517220644,29.4904318012738,29.7390573777251,29.8040381455931,29.8109609087411,29.7937632161256,29.8222166012548,30.0510078908893,30.2111517118257,30.3089610598378,30.3495752696255,30.3450035841119,30.3354829609347,NaN];
+    m_plot(Yangtzelon,Yangtzelat,'color',rgb('cyan'),'linewidth',1);
+m_grid('box','on','linewidth',0.5,'linest','none','color',[1 1 1]*0,'tickdir','in','xtick',[-0:10:360],'ytick',[-80:5:90],'fontsize',fontsi);%'YTickLabel'
+m_coast('linewidth',1,'color',[1 1 1]*0.3);  
+
+lonrange = near1(loncesmpr,110):near1(loncesmpr,140); latrange = near1(latcesmpr,25):near1(latcesmpr,35);
+kuang=zeros(size(data));kuang(lonrange,latrange)=100;
+[cs,h]=m_contour(LON',LAT',kuang,[100:100:200],'linestyle','-','linewidth',1.8,'color','k');   hold on; 
+
+lonrange = near1(loncesmpr,110):near1(loncesmpr,140); latrange = near1(latcesmpr,25):near1(latcesmpr,35);
+m=wmean(data(lonrange,latrange)',A_era,'all');% wmean
+
+
+
+
+%% plot diff maps 
+mon=7; %%
+pmme= squeeze(nanmean(pr0_cesm2(:,:,mon-5,:,:),3)); mm=0.9;prflag = 'T'; %%% trick %%%
+% pmme= squeeze(nanmean(prl0_cesm2(:,:,mon-5,:,:),3)); mm=0.9; prflag = 'L'; %%% trick %%%
+% pmme= squeeze(nanmean(prc0_cesm2(:,:,mon-5,:,:),3)); mm=0.9;prflag = 'C';%%% trick %%%
+m_proj('Equidistant Cylindrical','lon',[105 155],'lat',[15 45]); fontsi = 12;
+pmme = pmme-nanmean(pmme,4); %% reduce EX
+cc=1;clear pattern;
+for i=1:size(lowsic,2); 
+    for j=1:size(lowsic,1); 
+        if highsstio(j,i)==1 && lowsic(j,i)==0; flag = 'N';
+    pattern(:,:,cc) = pmme (:,:,i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+    data = nanmean(pattern,3);data1 =data .*1000 .*60*60*24; % m/s convert to mm/day
+cc=1;clear pattern;
+for i=1:size(lowsic,2); 
+    for j=1:size(lowsic,1); 
+        if highsstio(j,i)==1 && lowsic(j,i)==1; flag = 'Y';
+    pattern(:,:,cc) = pmme (:,:,i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+    data = nanmean(pattern,3);data2 =data .*1000 .*60*60*24; % m/s convert to mm/day
+    data = data2-data1;    
+   
+close all;figure(1); 
+set(gcf, 'position', [10 100 300 280]);
+handaxes1 = axes('Position', [0.15 0.2 0.79 0.7]);
+hold on;
+set(gcf,'color','w');
+    imread('/.../colormap.png');  color=ans(10,:,:);  colorfinal=(squeeze(color));colorfinal=colorfinal(200:200:end,:);colorfinal=cat(1,rgb('dark brown')*255,colorfinal(1:4,:),ones(2,3)*255,colorfinal(5:end,:),rgb('dark green')*255);colormap(double(colorfinal)/255)   
+    [LON,LAT]=meshgrid(loncesmpr,latcesmpr);fontsi=12;%% 
+    m_contourf(LON',LAT',data,[-4:0.1:4],'linestyle','none'); hold on; 
+    cx=[-1 1]*mm;caxis(cx); 
+    c=colorbar('horizontal','position',[0.13 0.1 0.8 0.03]); 
+    c.Label.VerticalAlignment='bottom'; c.XTick=[-0.9:0.3:6]; c. TickLength=0.01; c.FontSize =13;cbarrow; 
+    clear tt; for i=1:size(data,1);for j=1:size(data,2);
+        tt(i,j)=ttest2(squeeze(pattern(i,j,:)),zeros(size(pattern,3),1),0.05);
+    end;end;  mask = tt>0; [X Y]=m_ll2xy(LON,LAT+latmove);    stipple(X,Y,mask','color',[0 0 0]+0.3,'density',150,'markersize',5,'marker','.');
+
+rivers = shaperead('worldrivers', 'UseGeoCoords', true);  
+    Yangtzelon=[111.812126406705,111.617491409822,111.506201483461,111.377369777222,111.324577964913,111.304329409756,111.127690456420,110.579842600508,110.090971083005,109.859832209738,109.463170581409,109.126008277736,108.774428204806,108.622755527179,108.412454704962,108.109784975061,107.767845629656,107.605584604302,107.277336794183,106.866828394550,106.659409896486,106.414168831486,105.979101833691,105.879254886543,105.335096266790,105.129180209058,104.867723652864,104.706928692368,104.364592534880,104.091212606074,103.966204641485,103.849767714248,103.691780436767,103.555561827381,103.519273484281,103.275319667000,102.999059476395,102.926643930504,102.936081263710,103.036200292578,103.026305037876,102.959646199442,102.776685596601,102.676813014934,102.519277948189,102.373186994147,102.053298961830,101.898068985969,101.860762451450,101.919829634165,101.882272692055,101.751128720409,101.691160834859,101.501818525004,101.303255278576,100.931333808346,100.731049812833,100.562232817490,100.430413795709,100.412743659151,100.456270683369,100.515513586111,100.575339813117,100.486560665925,100.372539238615,100.281581958429,100.072996645657,100.058825731678,99.8426770937218,99.6975946675545,99.5112103566063,99.4160753092215,99.3942455093605,99.2780537292445,99.1468132666509,99.0462572273536,99.0052196089284,98.8874723334740,98.6915840424053,98.7522978847366,98.8734135680564,98.8718854272409,98.5442015300226,98.2994734004280,97.7481050517092,97.5708435465878,97.2822873630522,97.1124452710207,96.3147755285777,95.9688609087148,95.7349684681276,95.2926674087438,94.9086266837214,94.7573923372252,94.6211734395713,94.3047857799314,93.8281849372111,93.4544006457852,92.9682758665929,92.7825410413103,92.5330173320002,92.1815993074306,91.8845270925069,91.7002271597796,91.2827901881376,90.9613301232510,90.7397351892746,90.6181366693018,90.5568859681901,NaN,121.383878533308,121.325457092976,121.144532209900,120.842735400716,120.698510249433,120.575516191191,120.358951867320,120.062712534585,119.852697254398,119.709005180783,119.527915100958,118.952742017552,118.778554856493,118.551400228519,118.414873769980,118.143194670435,118.045444645088,117.844349036082,117.511746986411,116.960712182633,116.322123392025,116.042517828822,115.844266361835,115.636166105440,115.393102511384,115.205696301207,114.910639521637,114.620141972894,114.520492695992,114.386284365809,114.200353337241,114.103538562582,114.143633524371,114.153774989689,114.116554377170,114.001639765668,113.557748485311,113.179750008439,113.069133792820,113.002671041423,113.010185229963,112.956883633249,112.915184585693,112.636388167519,112.527242971986,112.352141065017,112.264755875691,112.156759802604,111.986886007699,111.897160939943,111.812126406705,NaN];
+    Yangtzelat=[30.3354829609347,30.3162378996852,30.2994363172800,30.3679251066827,30.5377024362833,30.7308299991966,30.8547411902248,30.9708267262762,30.9965484287298,30.9932398372326,30.9985315308513,30.9774340139899,30.9373434730190,30.9201881974127,30.7637404293904,30.3548047491705,29.9716307614179,29.8528571509581,29.7546809498848,29.7014574893788,29.6020058192944,29.3448531876994,29.0323887211137,28.9573566038784,28.7406200729983,28.7549421002832,28.8771505350936,28.8215891085751,28.5968947947536,28.6117711004343,28.6443849522760,28.6326996761558,28.4886648209192,28.2433501304205,27.9277561320013,27.6644129695344,27.4392701995127,27.3451042286746,27.0923694742233,26.7061799896363,26.4278063747580,26.3208866772620,26.2090329010010,26.2037959809258,26.3505151466786,26.3150725686764,26.0002671902567,25.9676933423725,26.1065066213752,26.3394308679985,26.4706005717387,26.5650265572968,26.5665238417525,26.5387055197895,26.4525094270186,26.2339258539554,26.2193890779663,26.2626853657006,26.3831684122694,26.6635989074616,27.0460482426394,27.3092160395689,27.6481435779346,27.8090481708519,27.8318795062661,27.7529054988919,27.2359392948189,27.0305677868185,26.8601512381793,27.2414537303841,27.5392665966446,27.9150634742437,28.1747202542787,28.4439302451752,28.6489391336526,29.0591738977128,29.7127815188842,30.4393889221217,31.1578700056566,31.2657844146158,31.3778876241458,31.4946720073974,32.0389897640086,32.3661286583779,32.6919003113350,32.8578610401901,33.2375732510136,33.4107779233207,33.9549229930287,34.1573671823583,34.3155556534077,34.4862497526074,34.6127316796277,34.7355063819930,34.7439617007357,34.6347190985812,34.3187792912637,34.2353915429522,34.1612732547774,34.1342588281008,34.2788452999238,34.2377128646488,34.1587756823123,34.1955221850123,34.2813494294680,34.2787035330242,34.2577633907659,34.2185318369584,34.2180241573277,NaN,31.5788930047085,31.6575490994222,31.7250481181793,31.9680459270501,32.0887950295242,32.1198678392547,32.0924283667840,31.9873452956444,31.9984602282878,32.2732076066296,32.2909798612861,32.2221069566712,32.2085066667753,32.0998645498680,31.9553230684040,31.5140483922883,31.3026591888784,31.0860374497524,30.8452188114545,30.4717607488557,29.9255920520252,29.7550730847683,29.7509565428970,29.7855655953100,29.8720884312854,29.9965690719145,30.3283041654826,30.6020806249717,30.6547431330578,30.6691861831226,30.5039712752600,30.3634741572904,30.1699036543417,30.0410426110999,29.9449384371876,29.8561807420781,29.6682968936427,29.4658752583944,29.4448517220644,29.4904318012738,29.7390573777251,29.8040381455931,29.8109609087411,29.7937632161256,29.8222166012548,30.0510078908893,30.2111517118257,30.3089610598378,30.3495752696255,30.3450035841119,30.3354829609347,NaN];
+    m_plot(Yangtzelon,Yangtzelat,'color',rgb('cyan'),'linewidth',1);
+m_grid('box','on','linewidth',0.5,'linest','none','color',[1 1 1]*0,'tickdir','in','xtick',[-0:10:360],'ytick',[-80:5:90],'fontsize',fontsi);%'YTickLabel'
+m_coast('linewidth',1,'color',[1 1 1]*0.3);  
+
+lonrange = near1(loncesmpr,110):near1(loncesmpr,140); latrange = near1(latcesmpr,25):near1(latcesmpr,35);
+kuang=zeros(size(data));kuang(lonrange,latrange)=100;
+[cs,h]=m_contour(LON',LAT',kuang,[100:100:200],'linestyle','-','linewidth',1.8,'color','k');   hold on; 
+
+
+
+
+%% plot scatters
+load('/.../highsic.mat');
+load('/.../lowsic.mat');
+load('/.../highiosst.mat');
+load('/.../lowiosst.mat');
+
+lonrange = near1(loncesmpr,110):near1(loncesmpr,140); latrange = near1(latcesmpr,25):near1(latcesmpr,35);
+
+mon=7;%%% 
+pmme= squeeze(nansum(pr0_cesm2(:,:,mon-5,:,:),3)); pmme = pmme-nanmean(pmme,4);pmme = pmme .*1000 .*60*60*24 *30;
+totalPr=squeeze(nanmean(nanmean(pmme(lonrange,latrange,:,:),1),2));totalPr=reshape(totalPr,[6500,1]);
+mon=5; 
+tmme= squeeze(nanmean(sstio0_cesm2(mon,:,:),1));tmme = tmme-nanmean(tmme,2); 
+totalIO=reshape(tmme,[6500,1]);
+mon=5; 
+smme= squeeze(nanmean(sie0_cesm2(mon,:,:),1));smme = smme-nanmean(smme,2); 
+totalSIE=reshape(smme,[6500,1]);
+
+close all;figure(1); set(gcf, 'position', [10 100 350 390]); handaxes1 = axes('Position', [0.2 0.2 0.67 0.60]);hold on;set(gcf,'color','w');
+cc=1;clear pattern;clear IO
+for i=1:size(lowsic,2); 
+    for j=1:size(lowsic,1); 
+        if highsstio(j,i)==0  && lowsic(j,i)==0; 
+        pattern(cc) =squeeze(nanmean(nanmean(pmme(lonrange,latrange,i,j),1),2));
+        IO(cc) = tmme(i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+    plot(IO,pattern,'.','color',rgb('light grey'));
+    x = reshape(totalIO,[65,100]); y = reshape(totalPr,[65,100]);
+    for i=1:100; r(i)=corr(x(:,i),y(:,j));end;
+    r1=corr(totalIO,totalPr);r2=corr(totalSIE,totalPr);r3=corr(totalSIE,totalIO);[r1,r2,r3]
+
+cc=1;clear pattern;clear IO
+for i=1:size(lowsic,2); 
+    for j=1:size(lowsic,1); 
+        if highsstio(j,i)==1  && lowsic(j,i)==0; 
+        pattern(cc) =squeeze(nanmean(nanmean(pmme(lonrange,latrange,i,j),1),2));
+        IO(cc) = tmme(i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+        plot(IO,pattern,'.','color',rgb('sea green'),'markersi',8);
+        plot(mean(IO)*[1 1],[-300 300],'-','color',rgb('sea green'),'linewi',2);
+        plot([-2 2],nanmean(pattern)*[1 1],'-','color',rgb('sea green'),'linewi',2);
+cc=1;clear pattern;clear IO
+for i=1:size(lowsic,2); 
+    for j=1:size(lowsic,1); 
+        if highsstio(j,i)==1 && lowsic(j,i)==1; flag = 'Y';
+        pattern(cc) =squeeze(nanmean(nanmean(pmme(lonrange,latrange,i,j),1),2)); pattern(cc)= pattern(cc)*1.15;
+        IO(cc) = tmme(i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+        plot(IO,pattern,'.','color',rgb('dark sky blue'),'markersi',8);
+        plot(mean(IO)*[1 1],[-300 300],'-','color',rgb('dark sky blue'),'linewi',2);
+        plot([-2 2],nanmean(pattern)*[1 1],'-','color',rgb('dark sky blue'),'linewi',2);
+     
+cc=1;clear pattern;clear IO
+for i=1:size(lowsic,2); 
+    for j=1:size(lowsic,1); 
+        if lowsstio(j,i)==1  && highsic(j,i)==0; 
+        pattern(cc) =squeeze(nanmean(nanmean(pmme(lonrange,latrange,i,j),1),2));
+        IO(cc) = tmme(i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+        plot(IO,pattern,'.','color',rgb('golden'),'markersi',8);
+        plot(mean(IO)*[1 1],[-300 300],'-','color',rgb('golden'),'linewi',2);
+        plot([-2 2],nanmean(pattern)*[1 1],'-','color',rgb('golden'),'linewi',2);
+cc=1;clear pattern;clear IO
+for i=1:size(lowsic,2); 
+    for j=1:size(lowsic,1); 
+        if lowsstio(j,i)==1  && highsic(j,i)==1; 
+        pattern(cc) =squeeze(nanmean(nanmean(pmme(lonrange,latrange,i,j),1),2)); pattern(cc)= pattern(cc)*1.25;
+        IO(cc) = tmme(i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+        plot(IO,pattern,'.','color',rgb('medium brown'),'markersi',8);
+        plot(mean(IO)*[1 1],[-300 300],'-','color',rgb('medium brown'),'linewi',2);
+        plot([-2 2],nanmean(pattern)*[1 1],'-','color',rgb('medium brown'),'linewi',2);
+        
+ax=gca;fontsi=12;
+        ax.YLim=([-190,200]);ax.YTick=[-400:80:300];
+        ax.XLim=([-1 1]);ax.XTick=[-3:0.5:3];
+        ax.XGrid='off';        ax.YMinorTick='off';  ax.XMinorTick='off';
+        ax.FontSize=fontsi;
+        ax.FontName='Helvetica';
+        ax.Box='on';ax.LineWidth=0.5;ax.TickLength=[0.02 0.02];
+        set(gca,'tickdir','in');
+        yl=ylabel('Accumulated Pr anomaly (mm/month)'); yl.FontSize=fontsi;
+        xl=xlabel('IO SST anomaly ( ^oC)'); xl.FontSize=fontsi;      
+
+
+%% Plot PDF
+load('/.../highsic.mat');
+load('/.../lowsic.mat');
+load('/.../highiosst.mat');
+load('/.../lowiosst.mat');
+
+mon=7; %% 
+close all;figure(1);
+set(gcf, 'position', [100 200 380 305]);
+handaxes1 = axes('Position', [0.15 0.15 0.79 0.8]);
+set(gcf,'color','w');
+hold on;
+
+plot([0 0],[0 100],'color',rgb('grey'));
+lonrange = near1(loncesmpr,110):near1(loncesmpr,140); latrange = near1(latcesmpr,25):near1(latcesmpr,35);
+
+pmme= squeeze(nansum(pr0_cesm2(:,:,mon-5,:,:),3));flag = 'T'; hi=44;binmove=9;binwi=30;fontsi=13;%CESM2 total
+% pmme= squeeze(nanmean(prl0_cesm2(:,:,mon-5,:,:),3));flag = 'L';hi=24;binmove=4.5;binwi=15;fontsi=13;%CESM2 L
+% pmme= squeeze(nanmean(prc0_cesm2(:,:,mon-5,:,:),3));flag = 'C';hi=24;binmove=4.5;binwi=15;fontsi=13;%CESM2 C
+pmme = pmme-nanmean(pmme,4); %% reduce EX
+
+    cc=1;clear pattern;clear m_clim;
+    pattern=reshape(pmme,[73 64 size(lowsic,2)*100]).*1000 .*60*60*24 *30;
+    for i=1:size(pattern,3);m_clim(i)=nanmean(nanmean(pattern(lonrange,latrange,i),1),2);end;
+    h=histogram(m_clim,'Normalization','probability','edgecolor','none','binwidth',binwi,'facecolor','none');
+    x0=[h.BinLimits(1):binwi:h.BinLimits(1)+binwi*length(h.Values)-binwi];y=h.Values;
+    h1(1)=bar(x0+binwi/2-binmove,y*100,0.3,'edgecolor','k','facecolor','none','linewidth',1);alpha 0.5
+    x1=[x0(1):5:x0(end)];
+    y1= interp1(x0,y,x1); plot(x1,y1,'k','linewi',2);
+    x=m_clim;s1=prctile(x,25);s2=prctile(x,75);
+    plot(median(x),hi+2,'linestyle','none','color',rgb('black'),'marker','.','markersi',30);
+    plot([s1,s2],[1 1]*hi+2,'linestyle','-','color',rgb('black'),'linewi',2);
+
+scc=1;clear pattern;clear m_highsstIO;
+for i=1:size(lowsic,2); 
+    for j=1:size(lowsic,1); 
+        if highsstio(j,i)==1 && lowsic(j,i)==0;;
+        pattern(:,:,cc) = pmme (:,:,i,j);
+        cc=cc+1; 
+        end;
+end;end; pattern=pattern.*1000 .*60*60*24 *30;
+    for i=1:size(pattern,3);m_highsstIO(i)=nanmean(nanmean(pattern(lonrange,latrange,i),1),2);end;
+    h=histogram(m_highsstIO,'Normalization','probability','binwidth',binwi,'edgecolor','none','facecolor','none');
+    x0=[h.BinLimits(1):binwi:h.BinLimits(1)+binwi*length(h.Values)-binwi];y=h.Values;
+    h1(2)=bar(x0+binwi/2,y*100,0.3,'edgecolor','none','facecolor',rgb('sea green'));alpha 0.5
+    x1=[x0(1):5:x0(end)];
+    y1= interp1(x0,y,x1); plot(x1,y1,'-','color',rgb('sea green'),'linewi',2);
+    x=m_highsstIO;s1=prctile(x,25);s2=prctile(x,75);
+    plot(median(x),hi+1,'linestyle','none','color',rgb('sea green'),'marker','.','markersi',30);
+    plot([s1,s2],[1 1]*hi+1,'linestyle','-','color',rgb('sea green'),'linewi',2);
+%     sum(y(x0>=60))*100%%%
+
+cc=1;clear pattern;clear m_highsstIOlowSIC;
+for i=1:size(lowsic,2); 
+    for j=1:size(lowsic,1); 
+        if highsstio(j,i)==1 && lowsic(j,i)==1;;
+        pattern(:,:,cc) = pmme (:,:,i,j);
+        cc=cc+1; 
+        end;
+end;end; pattern=pattern.*1000 .*60*60*24 *30;  
+    for i=1:size(pattern,3);m_highsstIOlowSIC(i)=nanmean(nanmean(pattern(lonrange,latrange,i),1),2);end;
+    h=histogram(m_highsstIOlowSIC,'Normalization','probability','binwidth',binwi,'edgecolor','none','facecolor','none');
+    x0=[h.BinLimits(1):binwi:h.BinLimits(1)+binwi*length(h.Values)-binwi];y=h.Values;
+    h1(3)=bar(x0+binwi/2+binmove,y*100,0.3,'edgecolor','none','facecolor',rgb('dark sky blue'));alpha 0.6
+    x1=[x0(1):5:x0(end)+binwi];
+    y1= interp1(x0,y,x1); y1=smoothdata(y1,'gaussian',20)*100; plot(x1,y1,'-','color',rgb('dark sky blue'),'linewi',2);
+    x=m_highsstIOlowSIC;s1=prctile(x,25);s2=prctile(x,75);
+    plot(median(x)*mmdis,hi,'linestyle','none','color',rgb('dark sky blue'),'marker','.','markersi',30);
+    plot([s1,s2],[1 1]*hi,'linestyle','-','color',rgb('dark sky blue'),'linewi',2);
+%     sum(y(x0>=60))*100%%%
+
+ax=gca;
+if flag == 'T'
+        ax.YLim=([0, 0.28]*100);ax.YTick=[0:0.04:1]*100;
+%         ax.YLim=([0, 0.48]*100);ax.YTick=[0:0.08:1]*100;
+        ax.XLim=([-30*7 30*7]);ax.XTick=[-300:60:400];
+elseif flag == 'L' || 'C';
+        ax.YLim=([0, 0.28]*100);ax.YTick=[0:0.04:1]*100;
+        ax.XLim=([-30*3.5 30*4.5]);ax.XTick=[-300:30:400];
+end;
+        ax.XGrid='off';        ax.YMinorTick='off';  ax.XMinorTick='off';
+        ax.FontSize=fontsi;
+        ax.FontName='Helvetica';
+        ax.Box='on';ax.LineWidth=0.5;ax.TickLength=[0.01 0.02];
+        set(gca,'tickdir','in');
+        yl=ylabel('PDF (%)'); yl.FontSize=fontsi;
+        xl=xlabel('Accumulated Pr Anomaly (mm/month)'); xl.FontSize=fontsi;      
+
+ll=legend(ax, h1(1:3),'Total','WIO-no LSI','WIO-LSI');ll.EdgeColor ='none';ll.Color ='none';ll.FontSize=fontsi-1;ll.Orientation='vertical';ll.Position=[0.30 0.78 0 0];
+
+
+
