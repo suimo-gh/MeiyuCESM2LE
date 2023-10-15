@@ -59,7 +59,7 @@ hold on;
     [LON,LAT]=meshgrid(loncesm,latcesm);
     data0 = cat(1,data,data); 
     m_proj('Equidistant Cylindrical','lon',[0 190],'lat',[20 85]); fontsi = 13;
-    imread('/Users/chenxiaodan/Documents/colormap/coolwarm.png');  color=ans(10,:,:); colorfinal=squeeze(color);colorfinal=colorfinal(1:50:end,:);colorfinal=cat(1,colorfinal(1:5,:),ones(2,3)*255,colorfinal(7:end,:));colormap(double(colorfinal)/255)   
+    imread('/.../coolwarm.png');  color=ans(10,:,:); colorfinal=squeeze(color);colorfinal=colorfinal(1:50:end,:);colorfinal=cat(1,colorfinal(1:5,:),ones(2,3)*255,colorfinal(7:end,:));colormap(double(colorfinal)/255)   
     m_contourf(LON',LAT'+latmove,data0,[-30:1:30],'linestyle','none'); hold on;  
     if     flag==200; cx=[-9 9]*2; caxis(cx);c=colorbar('vertical','position',[0.87 0.25 0.015 0.7]);c.XTick=[-12:3:12]*2;      
     elseif flag==500; cx=[-9 9]*1; caxis(cx);c=colorbar('vertical','position',[0.87 0.25 0.015 0.7]);c.XTick=[-12:3:12]*1;      
