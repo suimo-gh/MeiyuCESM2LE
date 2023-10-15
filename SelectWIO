@@ -1,0 +1,297 @@
+
+%%
+%% Use this file to plot the figures to select WIO and CIO cases
+%%
+%% select events
+clc;clear all;
+period    = [1950:2014];
+periodave = [1981:2010];
+clear t0;clear t;
+dir='/Users/chenxiaodan/Documents/Multi-decadal-Arctic-Warming/CESM2LE/SST/proc';
+    file=[dir,'/SST_Global_60S90N_19902030_1.nc']; 
+    latcesmsst=ncread(file,'lat');loncesmsst=ncread(file,'lon');
+    lonrange = near1(loncesmsst,40):near1(loncesmsst,120); latrange = near1(latcesmsst,-25):near1(latcesmsst,25);;
+for num=1:100;
+    file=[dir,'/SST_Global_60S90N_19902030_',num2str(num),'.nc']; 
+    t = squeeze(ncread(file,'SST'));
+    t = nanmean(nanmean(t(lonrange,latrange,:,:),1),2);
+    t = reshape(t(1:12*131),[12,131]);
+    t0(:,:,num)=t;
+end;'IO'
+    t0 = t0- nanmean(t0(:,periodave-1900+1,:),2); 
+    sstio0_cesm2= t0(:,period-1900+1,:);        
+    mon=5; 
+    tmme= squeeze(nanmean(sstio0_cesm2(mon,:,:),1));
+    tmme = tmme-nanmean(tmme,2); 
+    sst=tmme;
+
+    highsstio = zeros(100,1);lowsstio = zeros(100,1);
+for i=1:100;
+    h0=plot(years,sst(:,i),'color',rgb('light grey'),'linewi',0.5);
+    loc=find(sst(:,i) < std(sst(:,i)) * -1 ); 
+    hblue=plot(years(loc),sst(loc,i),'linestyle','none','color',rgb('bright blue'),'marker','.','markersi',8);
+    lowsstio(i,loc)=1;
+    loc=find(sst(:,i) > std(sst(:,i)) * 1); 
+    hred=plot(years(loc),sst(loc,i),'linestyle','none','color',rgb('light red'),'marker','.','markersi',8);
+    highsstio(i,loc)=1;
+end;
+    save('/.../lowsstio_MJ.mat','lowsstio');   
+    save('/.../highsstio_MJ.mat','highsstio');   
+
+%% plot IO SST timeseries in individual runs
+clc;clear all;
+period    = [1950:2014];
+periodave = [1981:2010];
+dir='/.../CESM2LE/SST/proc';
+    file=[dir,'/SST_Global_60S90N_19902030_1.nc']; 
+    latcesmsst=ncread(file,'lat');loncesmsst=ncread(file,'lon');
+for num=1:100; num
+    file=[dir,'/SST_Global_60S90N_19902030_',num2str(num),'.nc']; 
+    t = squeeze(ncread(file,'SST'));
+    t = reshape(t(:,:,1:12*131),[288,160,12,131]);
+    t = t(:,:,1:7,period-1900-1);
+    t0(:,:,:,:,num)=t;
+end;
+sst0 = t0- nanmean(t0(:,:,:,periodave-1950+1,:),4); 
+sst0 = sst0-nanmean(sst0,5);clear t0;clear t;
+
+    lonrange = near1(loncesmsst,40):near1(loncesmsst,120); latrange = near1(latcesmsst,-25):near1(latcesmsst,25);;
+    mon=5;
+    sst = squeeze(nanmean(nanmean(sst0(lonrange,latrange,mon,:,:),1),2));
+
+close all;figure(1);
+set(gcf, 'position', [100 200 400 220]); 
+handaxes1 = axes('Position', [0.15 0.17 0.7 0.7]);
+set(gcf,'color','w');
+hold on;
+
+    years= period;
+    h00=plot(years,mean(sst,2),'--','color',rgb('black'),'linewi',0.8);
+ax=gca;fontsi=10;
+        ax.YLim=([-1,1]);ax.YTick=[-4:0.4:2];
+        ax.XLim=([period(1)-1 period(end)+1]);ax.XTick=[1900:10:2030];
+        ax.XGrid='off';        ax.YMinorTick='off';  ax.XMinorTick='off';
+        ax.FontSize=fontsi;
+        ax.FontName='Helvetica';
+        ax.Box='on';ax.LineWidth=0.5;ax.TickLength=[0.01 0.02];
+        set(gca,'tickdir','in');
+        yl=ylabel('SST (^oC)'); yl.FontSize=fontsi;
+l=legend([hred hblue],'Warm IO','Cold IO');l.Color='none';l.FontSize=10;l.Position=[0.25 0.2 0.1 0.1];l.Orientation='Horizontal';
+
+%% plot IO SST diff pattern
+load('/.../highsstio_MJ.mat','highsstio');   
+load('/.../lowsstio_MJ.mat','lowsstio');  
+mon=5; %%% 5 / 6:7
+pmme= squeeze(nanmean(sst0(:,:,mon,:,:),3)); mm=10;%CESM2 total
+pmme = pmme-nanmean(pmme,4); %% reduce EX
+
+cc=1;clear pattern_warm;
+for i=1:size(highsstio,2); 
+    for j=1:size(highsstio,1);     
+        if highsstio(j,i)==1; 
+            pattern_warm(:,:,cc) = pmme (:,:,i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+cc=1;clear pattern_cold;
+for i=1:size(highsstio,2); 
+    for j=1:size(highsstio,1);     
+        if lowsstio(j,i)==1; 
+            pattern_cold(:,:,cc) = pmme (:,:,i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+    plotdata = nanmean(pattern_warm,3)-nanmean(pattern_cold,3);
+% IO pattern
+close all;figure(1); 
+set(gcf, 'position', [10 100 450 220]); 
+handaxes1 = axes('Position', [0.1 0.2 0.78 0.7]);
+set(gcf,'color','w');
+hold on;
+    
+    imread('.../colormap.png');  color=squeeze(ans(10,:,:));colorfinal=color(1:50:end,:);colorfinal=cat(1,colorfinal(1:5,:),ones(2,3)*255,colorfinal(7:end,:));colormap(double(colorfinal)/255)   
+    m_proj('Equidistant Cylindrical','lon',[30 135],'lat',[-30 30]); fontsi=10;%% 
+    [LON,LAT]=meshgrid(loncesmsst,latcesmsst);
+    m_contourf(LON',LAT',plotdata,[-2:0.1:2],'linestyle','none'); hold on; 
+    cx=[-2,2];caxis(cx); c=colorbar('vertical','position',[0.8 0.25 0.02 0.6]); 
+    c.XTick=[-2:1:2]; c. TickLength=0.01; c.FontSize =fontsi;
+    clear tt; for i=1:size(plotdata,1);for j=1:size(plotdata,2);
+        tt(i,j)=ttest2(squeeze(pattern_warm(i,j,:)),squeeze(pattern_cold(i,j,:)),0.05);
+    end;end;  
+        mask = tt>0; [X Y]=m_ll2xy(LON,LAT);   
+        stipple(X,Y,mask','color',[0 0 0]+0.3,'density',250,'markersize',5,'marker','.');
+
+m_grid('box','on','linewidth',0.5,'linest','none','color',[1 1 1]*0,'tickdir','in','xtick',[-0:20:360],'ytick',[-80:10:90],'fontsize',fontsi);%'YTickLabel'
+m_coast('linewidth',1,'color',[1 1 1]*0.3);  
+m_text(107,43,num2str(cc),'fontsi',14);
+
+%kuang
+lonrange = near1(loncesmsst,40):near1(loncesmsst,120); latrange = near1(latcesmsst,-25):near1(latcesmsst,25);;
+kuang=zeros(size(plotdata));kuang(lonrange,latrange)=100;
+[cs,h]=m_contour(LON',LAT',kuang,[100:100:200],'linestyle','-','linewidth',1.8,'color','k');   hold on; 
+
+
+
+%% plot IO SST and EP SST time series 
+clc;clear all;
+period    = [1950:2014];
+periodave = [1981:2010];
+dir='/.../CESM2LE/SST/proc';
+dir='/Volumes/CESM2Mon_2D/SST/proc';
+    file=[dir,'/SST_Global_60S90N_19902030_1.nc']; 
+    latcesmsst=ncread(file,'lat');loncesmsst=ncread(file,'lon');
+'IO'
+    lonrange = near1(loncesmsst,40):near1(loncesmsst,120); latrange = near1(latcesmsst,-25):near1(latcesmsst,25);;
+for num=1:100;
+    file=[dir,'/SST_Global_60S90N_19902030_',num2str(num),'.nc']; 
+    t = squeeze(ncread(file,'SST'));
+    t = nanmean(nanmean(t(lonrange,latrange,:,:),1),2);
+    t = reshape(t(1:12*131),[12,131]);
+    t0(:,:,num)=t;
+end;
+    t0 = t0- nanmean(t0(:,periodave-1900+1,:),2); 
+    sstio0_cesm2= t0(:,period-1900-1,:); 
+    sstio0_cesm2=sstio0_cesm2-nanmean(sstio0_cesm2,3);
+'EP'
+clear t0;clear t;
+    lonrange = near1(loncesmsst,180+10):near1(loncesmsst,180+60); latrange = near1(latcesmsst,-5):near1(latcesmsst,5);
+for num=1:100;
+    file=[dir,'/SST_Global_60S90N_19902030_',num2str(num),'.nc']; 
+    t = squeeze(ncread(file,'SST'));
+    t = nanmean(nanmean(t(lonrange,latrange,:,:),1),2);
+    t = reshape(t(1:12*131),[12,131]);
+    t0(:,:,num)=t;
+end;
+    t0 = t0- nanmean(t0(:,periodave-1900+1,:),2); 
+    sstep0_cesm2= t0(:,period-1900-1,:);   clear t0;clear t;
+    sstep0_cesm2=sstep0_cesm2-nanmean(sstep0_cesm2,3);
+
+load('/.../highsstio_MJ.mat','highsstio');   
+load('/.../lowsstio_MJ.mat','lowsstio');  
+mon=[1:7]; 
+pmme= sstio0_cesm2(mon,:,:); pmme = pmme-nanmean(pmme,3); 
+cc=1;clear pattern_warm_io;
+for i=2:size(highsstio,2); 
+    for j=1:size(highsstio,1);     
+        if highsstio(j,i)==1; flag = '';
+            pattern_warm_io(:,cc) = pmme (:,i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+mon=[8:12]; %%
+pmme= sstio0_cesm2(mon,:,:); pmme = pmme-nanmean(pmme,3); 
+cc=1;clear pattern_warm_io_pre;
+for i=2:size(highsstio,2); 
+    for j=1:size(highsstio,1);     
+        if highsstio(j,i)==1; flag = '';
+            pattern_warm_io_pre(:,cc) = pmme (:,i-1,j); % the pre-winter
+        cc=cc+1; 
+        end; 
+end;end;
+pattern_warm_io = cat(1,pattern_warm_io_pre,pattern_warm_io);
+
+mon=[1:7]; %%
+pmme= sstep0_cesm2(mon,:,:); pmme = pmme-nanmean(pmme,3); 
+cc=1;clear pattern_warm_ep;
+for i=2:size(highsstio,2); 
+    for j=1:size(highsstio,1);     
+        if highsstio(j,i)==1; flag = '';
+            pattern_warm_ep(:,cc) = pmme (:,i,j);
+        cc=cc+1; 
+        end; 
+end;end;
+mon=[8:12]; %%
+pmme= sstep0_cesm2(mon,:,:); pmme = pmme-nanmean(pmme,3); 
+cc=1;clear pattern_warm_ep_pre;
+for i=2:size(highsstio,2); 
+    for j=1:size(highsstio,1);     
+        if highsstio(j,i)==1; flag = '';
+            pattern_warm_ep_pre(:,cc) = pmme (:,i-1,j); % the pre-winter
+        cc=cc+1; 
+        end; 
+end;end;'EP'
+pattern_warm_ep = cat(1,pattern_warm_ep_pre,pattern_warm_ep);
+
+close all;figure(1);
+set(gcf, 'position', [10 200 400 220]);
+handaxes1 = axes('Position', [0.15 0.17 0.7 0.7]);
+set(gcf,'color','w');
+hold on;
+fontsi=10;
+years= [-4:1:7];
+
+yyaxis left;
+    data = nanmean(pattern_warm_io,2);
+    for i=1:12; 
+        sd(i)=std(pattern_warm_io(i,:)); 
+    end;
+    h00=plot(years,data,    '-','color',rgb('sky blue'),'linewi',2,'marker','.','markersi',15);
+    [l,p] = boundedline(years,data,sd','cmap',rgb('sky blue'),'alpha');
+        l.LineWidth = 2;
+        l.Color = rgb('sky blue');
+        l.LineStyle = '-';
+        yl=ylabel('IO SST (^oC)'); yl.FontSize=fontsi;
+        ax=gca;
+            ax.YLim=([-0.2,0.55]);ax.YTick=[-0.1:0.2:0.5];
+        
+yyaxis right;
+    data = nanmean(pattern_warm_ep,2);
+    for i=1:12; 
+        sd(i)=std(pattern_warm_ep(i,:));
+    end;
+    h00=plot(years,data,'-','color',rgb('orange'),'linewi',2,'marker','.','markersi',15);
+    [l,p] = boundedline(years,data,sd','cmap',rgb('orange'),'alpha');
+        l.LineWidth = 2;
+        l.Color = rgb('orange');
+        l.LineStyle = '-';
+        yl=ylabel('EP SST (^oC)'); yl.FontSize=fontsi; 
+        ax=gca; 
+            ax.YLim=([-0.5,3]);ax.YTick=[-1:1:5];
+            ax.XLim=([-4.2,7.2]);ax.XTick=[-3:2:7];
+            ax.XGrid='off';        ax.YMinorTick='off';  ax.XMinorTick='off';
+            ax.FontSize=fontsi;
+            ax.FontName='Helvetica';
+            ax.Box='on';ax.LineWidth=0.8; ax.TickLength=[0.01 0.02];
+            ax.XTickLabel = {'Sep (-1)','Nov (-1)','Jan (-1)', 'Mar (0)','May (0)','Jul(0)'};
+            set(gca,'tickdir','in');
+
+
+
+%% plot lead-lag correlations
+sst67=squeeze(nanmean(sstio0_cesm2(6:7,:,:),1));
+sst5=squeeze(sstio0_cesm2(5,:,:));
+sst4=squeeze(sstio0_cesm2(4,:,:));
+sst3=squeeze(sstio0_cesm2(3,:,:));
+sst2=squeeze(sstio0_cesm2(2,:,:));
+sst1=squeeze(sstio0_cesm2(1,:,:));
+
+clear co;
+for i=1:100;
+    co(i,5)=corr(sst67(:,i),sst5(:,i));
+    co(i,4)=corr(sst67(:,i),sst4(:,i));
+    co(i,3)=corr(sst67(:,i),sst3(:,i));
+    co(i,2)=corr(sst67(:,i),sst2(:,i));
+    co(i,1)=corr(sst67(:,i),sst1(:,i));
+end;
+close all;figure(1); set(gcf, 'position', [10 200 400 220]); handaxes1 = axes('Position', [0.15 0.17 0.7 0.7]);hold on;set(gcf,'color','w');
+plot(1:5,mean(co,1),'.','markersi',30,'color',rgb('sky blue'));
+ax=gca; ax.YLim=([0,1]);ax.YTick=[0:0.2:1];
+        ax.XLim=([0.5,5.5]);ax.XTick=[1:1:5];
+        ax.XGrid='off';        ax.YMinorTick='off';  ax.XMinorTick='off';
+        ax.FontSize=fontsi;
+        ax.FontName='Helvetica';
+        ax.Box='on';ax.LineWidth=0.8; ax.TickLength=[0.01 0.02];
+        set(gca,'tickdir','in');
+        ax.XTickLabel = {'Jan (0)','Feb (0)','Mar (0)','Apr (0)','May (0)'};
+        yl=ylabel('Correlation Coefficient'); yl.FontSize=fontsi; 
+
+for i=1:5;        
+    plot(i+[-0.05,0.05],[1,1]*[max(co(:,i))],'-','color',rgb('sky blue'),'linewi',2);
+    plot(i+[-0.05,0.05],[1,1]*[min(co(:,i))],'-','color',rgb('sky blue'),'linewi',2);
+    plot(i+[-0.00,0.00],[min(co(:,i)),max(co(:,i))],'-','color',rgb('sky blue'),'linewi',2);
+end;
+
+
+
+
+
