@@ -1,0 +1,86 @@
+%%
+%% Use this file to calculate blocking frequnecy in CESM2LE 
+%%
+
+%% load Z500 data
+clc;clear all;
+load('/.../lowsic.mat');
+load('/.../highiosst.mat');
+
+clear t0;clear t;var = 'Z500';
+period = [1950:2014];
+periodave = [1981:2010];
+dir=['...'];
+file=[dir,'/Z500_NH_July_1_combine_19502014.nc'];
+latcesm=ncread(file,'lat');loncesm=ncread(file,'lon');
+for num=1:100; num
+    file=[dir,'Z500_NH_July_',num2str(num),'_combine_19502014.nc']; 
+    t = squeeze(ncread(file,var));
+    z0_cesm(:,:,:,num) = t;
+end;
+
+%% calculation instantaneous BF
+z0_cesm = reshape(z0_cesm,[288,96,31,65,80]);
+pmme= z0_cesm; cc=1;clear pattern1;
+for i=1:2014-1950+1;   
+    for j=1:100;      
+        if highsst(j,i)==1 && lowsic(j,i)==0;  
+        pattern1(:,:,:,cc) = pmme (:,:,:,i,j); cc=cc+1; 
+        end;
+end;end;
+latcesm=ncread(file,'lat');loncesm=ncread(file,'lon');
+clear instant1;
+for j=1:size(pattern1,4);j
+    for i=1:size(pattern1,3);
+    [ibf,lonbf,latbf]=DaviniBI(pattern1(:,:,i,j),loncesm,latcesm) ;
+    instant1(:,:,i,j)=ibf;
+    end;
+end;
+ibf1=squeeze(mean(sum(instant1,3),4));
+%
+pmme= z0_cesm; cc=1;clear pattern2;
+for i=1:2014-1950+1;   
+    for j=1:80;      
+        if highsst(j,i)==1 && lowsic(j,i)==1;  
+        pattern2(:,:,:,cc) = pmme (:,:,:,i,j); cc=cc+1; 
+        end;
+end;end;
+latcesm=ncread(file,'lat');loncesm=ncread(file,'lon');
+clear instant2;
+for j=1:size(pattern2,4);j
+    for i=1:size(pattern2,3);
+    [ibf,lonbf,latbf]=DaviniBI(pattern2(:,:,i,j),loncesm,latcesm) ;
+    instant2(:,:,i,j)=ibf;
+    end;
+end;
+ibf2=squeeze(mean(sum(instant2,3),4));
+
+%% diff pattern of instantaneous BF 
+data = ibf2-ibf1;
+data = data./31 *100;
+
+close all;figure(1); 
+set(gcf, 'position', [10 100 600 280]); 
+handaxes1 = axes('Position', [0.1 0.25 0.79 0.7]);
+set(gcf,'color','w');
+hold on;
+
+    [LON,LAT]=meshgrid(cat(1,lonbf-360,lonbf),latbf);
+    data = cat(1,data,data);
+    m_proj('Equidistant Cylindrical','lon',[-65 215],'lat',[50 75]); fontsi = 13;
+    imread('colormap.png');  color=ans(10,:,:); colorfinal=squeeze(color);colorfinal=colorfinal(1:50:end,:);colorfinal=cat(1,colorfinal(1:5,:),ones(2,3)*255,colorfinal(7:end,:));colormap(double(colorfinal)/255)   
+    m_contourf(LON',LAT',data,[-10:1:10],'linestyle','none'); hold on;  
+    cx=[-6 6]; caxis(cx);
+    c=colorbar('horizontal','position',[0.15 0.32 0.7 0.03]);
+    c.XTick=[-12:2:12]; c.Label.VerticalAlignment='bottom'; c. TickLength=0.005; c.FontSize =fontsi;   
+
+m_grid('box','on','linewidth',0.5,'linest','none','color',[1 1 1]*0,'tickdir','in','xtick',[-360:30:360],'ytick',[10:10:90],'fontsize',fontsi);%'YTickLabel'
+m_coast('linewidth',0.5,'color',[1 1 1]*0);  
+
+
+
+
+
+
+
+
