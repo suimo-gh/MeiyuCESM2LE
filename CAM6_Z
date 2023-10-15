@@ -2,21 +2,13 @@
 %% Use this file to plot Z diff in CAM6 exps
 %%
 
-%%
+%% 
 clc;clear all;
-hPa = 850; 
-flag= 850;
+hPa = 500;  %%% 850 500 200 %%%
+flag= 500;
 
-for i=1:50;i
-    file=['/.../F2000_f09_ctrl/postpro/Z3_ctrl_',num2str(i),'.nc'];%287x117x12x365
-    lev=ncread(file,'lev_p');lev=find(lev==hPa);z=ncread(file,'Z',[1 1 lev 31+29+31+1],[287,117,1,120]);
-    ctl_z(:,:,:,i)=squeeze(z);
-end
-member=20;for i=1:member;i
-    file=['/.../LowSIE/postpro/Z3_lowSIE_',num2str(i),'.nc'];%287x117x12x150
-    lev=ncread(file,'lev_p');lev=find(lev==hPa);z=ncread(file,'Z',[1 1 lev 1],[287,117,1,120]);
-    ioarctic_z(:,:,:,i)=squeeze(z);
-end
+load ('/Volumes/Meiyu2020/F2000_f09_ctrl/postpro/ctl_z500_mjja_EM.mat','ctl','lon','lat');
+load ('/Volumes/Meiyu2020/F2000_f09_ctrl/postpro/LowSIE_z500_mjja_EM.mat','ctl','lon','lat');
 
 
 dayday=91:120;memberioarctic=[1:20]; mflag='July';
